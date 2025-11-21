@@ -5,7 +5,6 @@
 ![MindMate](https://img.shields.io/badge/MindMate-Mental_Health_AI-blue)
 ![Django](https://img.shields.io/badge/Django-5.1.2-darkgreen)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
 
 *A comprehensive, real-time AI-powered mental health and wellness platform with voice capabilities, interactive games, and advanced psychological assessments.*
 
