@@ -202,57 +202,20 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Step 4: Configure Environment Variables
-
-Create a `.env` file in the root directory with the following variables:
-
-```env
-# Django Settings
-SECRET_KEY=your-secret-key-here
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
-
-# Redis Configuration
-REDIS_URL=redis://127.0.0.1:6379/0
-
-# Google Gemini AI API
-GEMINI_API_KEY=your-gemini-api-key
-
-# Cloudflare AI API
-CLOUDFLARE_API_TOKEN=your-cloudflare-token
-CLOUDFLARE_ACCOUNT_ID=your-account-id
-
-# Twilio Configuration
-TWILIO_ACCOUNT_SID=your-twilio-account-sid
-TWILIO_AUTH_TOKEN=your-twilio-auth-token
-TWILIO_PHONE_NUMBER=your-twilio-phone-number
-
-# ElevenLabs Configuration
-ELEVENLABS_API_KEY=your-elevenlabs-key
-ELEVENLABS_AGENT_ID=your-agent-id
-
-# ngrok URL (for WebSocket webhooks)
-NGROK_URL=https://your-ngrok-url.ngrok-free.app
-
-# Media Files
-MEDIA_ROOT=media/
-MEDIA_URL=/media/
-```
-
-### Step 5: Initialize Database
+### Step 4: Initialize Database
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### Step 6: Create Superuser
+### Step 5: Create Superuser
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### Step 7: Collect Static Files
+### Step 6: Collect Static Files
 
 ```bash
 python manage.py collectstatic --noinput
