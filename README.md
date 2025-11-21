@@ -24,10 +24,7 @@
 - [Quick Start](#quick-start)
 - [Commands Reference](#commands-reference)
 - [Project Structure](#project-structure)
-- [Configuration](#configuration)
 - [Deployment](#deployment)
-- [API Documentation](#api-documentation)
-- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -124,49 +121,32 @@ The platform combines cutting-edge technologies including:
 
 ## 🏗️ System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    MindMate Application                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────────┐  ┌──────────────────┐                 │
-│  │  Django Web      │  │  WebSocket       │                 │
-│  │  Application     │  │  (Channels)      │                 │
-│  │  Port: 8000      │  │  Real-time       │                 │
-│  └────────┬─────────┘  └────────┬─────────┘                 │
-│           │                     │                            │
-│     ┌─────▼────────────────────▼─────┐                      │
-│     │    Daphne ASGI Server          │                      │
-│     │  (Real-time Application)       │                      │
-│     └─────────────────────────────────┘                      │
-│           │              │              │                    │
-│     ┌─────▼──┐    ┌─────▼──┐    ┌─────▼──┐                 │
-│     │  Redis │    │Database │    │ Media  │                 │
-│     │ Cache/ │    │(SQLite) │    │ Files  │                 │
-│     │ Broker │    │         │    │        │                 │
-│     └────────┘    └─────────┘    └────────┘                 │
-│           │                                                  │
-│     ┌─────▼──────────────────┐                              │
-│     │  Celery Workers        │                              │
-│     │  (Background Tasks)    │                              │
-│     ├────────────────────────┤                              │
-│     │ • Voice Processing     │                              │
-│     │ • Email Notifications  │                              │
-│     │ • Scheduled Jobs       │                              │
-│     └────────────────────────┘                              │
-│           │                                                  │
-│     ┌─────▼──────────────────┐                              │
-│     │  Celery Beat           │                              │
-│     │  (Scheduled Tasks)     │                              │
-│     └────────────────────────┘                              │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
-         │                  │                 │
-    ┌────▼────┐        ┌────▼────┐      ┌────▼────┐
-    │ Google  │        │ Twilio  │      │ElevenLabs
-    │ Gemini  │        │ Voice   │      │TTS
-    │  API    │        │  API    │      │  API
-    └─────────┘        └─────────┘      └─────────┘
+```mermaid
+graph TD
+    User["👤 Users"] <--> UI["🌐 Django Web UI<br/>(Port: 8000)"]
+    UI <--> API["🔌 Daphne ASGI Server"]
+    
+    subgraph Backend["Backend Services"]
+        API --> Auth["🔐 Authentication"]
+        API --> Core["⚙️ Core Logic Engine"]
+        API --> Voice["🎤 Voice Processor"]
+    end
+    
+    subgraph Storage["Storage Layer"]
+        Core --> DB[("🗄️ PostgreSQL<br/>User Data")]
+        Auth --> Cache[("⚡ Redis<br/>Cache & Broker")]
+        Voice --> Media[("📁 Media Storage")]
+    end
+    
+    subgraph External["External Services"]
+        Core --> Gemini["🤖 Google Gemini API"]
+        Voice --> STT["🎙️ Google Speech-to-Text"]
+        Voice --> TTS["🔊 ElevenLabs TTS"]
+        Auth --> Twilio["📞 Twilio Voice API"]
+    end
+    
+    Cache --> Tasks["⏱️ Celery Task Queue"]
+    Tasks --> Beat["🔄 Celery Beat Scheduler"]
 ```
 
 ---
@@ -475,38 +455,6 @@ mindmate/
 
 ---
 
-## ⚙️ Configuration
-
-### Django Settings (`perplex/settings.py`)
-
-Key configurations:
-- **INSTALLED_APPS**: All Django applications
-- **DATABASES**: Database configuration
-- **CACHES**: Redis caching setup
-- **CELERY_BROKER_URL**: Message broker configuration
-- **CHANNELS**: WebSocket configuration
-
-### Celery Configuration (`perplex/celery.py`)
-
-- Task broker: Redis
-- Result backend: Redis
-- Time zone: UTC
-- Task serialization: JSON
-
-### Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SECRET_KEY` | Django secret key | Complex random string |
-| `DEBUG` | Debug mode | True/False |
-| `ALLOWED_HOSTS` | Allowed hostnames | localhost,127.0.0.1 |
-| `REDIS_URL` | Redis connection URL | redis://localhost:6379/0 |
-| `GEMINI_API_KEY` | Google Gemini API key | AIzaSy... |
-| `TWILIO_ACCOUNT_SID` | Twilio account ID | AC... |
-| `ELEVENLABS_API_KEY` | ElevenLabs API key | sk_... |
-
----
-
 ## 🐳 Deployment
 
 ### Docker Deployment
@@ -551,107 +499,11 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ---
 
-## 📡 API Documentation
-
-### Authentication Endpoints
-
-**Login:**
-```
-POST /accounts/login/
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password"
-}
-```
-
-**Sign Up:**
-```
-POST /accounts/signup/
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password1": "securepassword",
-  "password2": "securepassword"
-}
-```
-
-### Voice Call Endpoints
-
-**Initiate Voice Call:**
-```
-POST /voice-calls/initiate/
-Content-Type: application/json
-
-{
-  "recipient_type": "ai_assistant"
-}
-```
-
-**End Voice Call:**
-```
-POST /voice-calls/<call_id>/end/
-```
-
-### Assessment Endpoints
-
-**Start Quiz:**
-```
-POST /app/quiz/start/
-Content-Type: application/json
-
-{
-  "quiz_type": "mental_health"
-}
-```
-
-**Submit Quiz Response:**
-```
-POST /app/quiz/<quiz_id>/submit/
-Content-Type: application/json
-
-{
-  "answers": [...]
-}
-```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow PEP 8 style guide
-- Write unit tests for new features
-- Update documentation
-- Ensure all tests pass before PR
-
----
-
 ## 📝 License
 
 © 2025 Techipedia. All rights reserved.
 
 This project and all its contents are the exclusive property of Techipedia. Unauthorized copying, reproduction, or distribution of this project or any of its components is strictly prohibited without prior written permission from Techipedia.
-
----
-
-## 🙏 Acknowledgments
-
-- Django community for the excellent framework
-- Google for Generative AI API
-- Twilio for voice infrastructure
-- ElevenLabs for text-to-speech technology
-- All contributors and supporters
 
 ---
 
