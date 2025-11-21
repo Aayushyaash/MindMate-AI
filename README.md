@@ -23,7 +23,6 @@
 - [Quick Start](#quick-start)
 - [Commands Reference](#commands-reference)
 - [Project Structure](#project-structure)
-- [Deployment](#deployment)
 - [License](#license)
 
 ---
@@ -413,27 +412,6 @@ mindmate/
 ├── .gitignore                   # Git ignore rules
 ├── LICENSE                      # MIT License
 └── README.md                    # This file
-```
-
----
-
-## 🐳 Deployment
-
-### Docker Deployment
-
-**Build Docker Image:**
-```bash
-docker build -t mindmate:latest .
-```
-
-**Run with Docker Compose (Development):**
-```bash
-docker-compose up -d
-```
-
-**Run with Docker Compose (Production):**
-```bash
-docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ---
