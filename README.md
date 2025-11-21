@@ -473,29 +473,6 @@ docker-compose up -d
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Environment Setup for Production
-
-1. Set `DEBUG=False` in `.env`
-2. Update `ALLOWED_HOSTS` with your domain
-3. Configure PostgreSQL database
-4. Set up proper SSL/TLS certificates
-5. Configure email backend for notifications
-6. Enable CSRF protections
-7. Set secure cookie flags
-
-### Production Checklist
-
-- [ ] Use PostgreSQL instead of SQLite
-- [ ] Set `DEBUG=False`
-- [ ] Generate strong `SECRET_KEY`
-- [ ] Configure allowed hosts
-- [ ] Set up HTTPS/SSL
-- [ ] Configure email backend
-- [ ] Set up proper logging
-- [ ] Enable rate limiting
-- [ ] Configure CORS properly
-- [ ] Set up monitoring and alerts
-
 ---
 
 ## 📝 License
