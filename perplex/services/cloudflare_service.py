@@ -78,25 +78,13 @@ class CloudflareService(BaseService):
         positive_score = 0.0
         negative_score = 0.0
         
-        # The result format is usually a list of dicts: [{'label': 'POSITIVE', 'score': 0.9}, ...]
-        # or sometimes just the object depending on the model/wrapper. 
-        # The code assumes a list.
-        
-        # Handle cases where result might be wrapped differently or different model output
-        if isinstance(result, list):
-            for item in result:
-                # Some models return list of list for batch, or just list for single.
-                if isinstance(item, list):
-                     # Handle batch if necessary, but we send single text.
-                     # For now assume single input -> single list of scores.
-                     item = item[0] 
-                
-                label = item.get("label", "").upper()
-                score = item.get("score", 0.0)
-                if label == "POSITIVE":
-                    positive_score = score
-                elif label == "NEGATIVE":
-                    negative_score = score
+        for item in result:
+            label = item.get("label", "").upper()
+            score = item.get("score", 0.0)
+            if label == "POSITIVE":
+                positive_score = score
+            elif label == "NEGATIVE":
+                negative_score = score
         
         return {
             "positive": positive_score,

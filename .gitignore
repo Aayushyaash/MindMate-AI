@@ -37,8 +37,7 @@ db.sqlite3-journal
 # Static & Media
 staticfiles/
 /static/
-/media/images/
-/media/prescriptions/
+
 
 # Environment
 .env

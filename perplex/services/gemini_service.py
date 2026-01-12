@@ -117,15 +117,11 @@ RULES:
     def health_check(self) -> bool:
         """Verify Gemini API connectivity by listing available models."""
         try:
-            # list() iterates the generator to verify connectivity
-            models = list(self.client.models.list(config={"page_size": 1}))
-            if not models:
-                # It's possible to have no models, but unlikely. 
-                # If we can list, we are connected.
-                pass 
-                
-            # We can't easily check for specific models without paging through all, 
-            # so just successful connection is enough for health check.
+            # Simple generation check instead of listing all models which might be slow/restricted
+            self.client.models.generate_content(
+                model=self.MODELS["flash"], 
+                contents="Test"
+            )
             logger.info(f"✓ Gemini AI: Connected")
             return True
         except Exception as e:

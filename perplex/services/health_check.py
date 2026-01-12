@@ -114,7 +114,7 @@ def validate_all_services():
                     "help_url": help_url
                 })
     else:
-        logger.warning("⚠️ Voice calls disabled (VOICE_CALLS_ENABLED=False)")
+        logger.info("⚠️ Voice calls disabled (VOICE_CALLS_ENABLED=False)")
     
     # Report optional service warnings
     for warning in optional_warnings:
