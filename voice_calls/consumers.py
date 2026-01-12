@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 class MediaStreamConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for Twilio media streams"""
     
+    CRISIS_KEYWORDS = [
+        'suicide', 'kill myself', 'end my life', 'want to die',
+        'hurt myself', 'cutting', 'overdose', 'better off dead'
+    ]
+    
     async def connect(self):
         """Handle WebSocket connection"""
         self.schedule_id = self.scope['url_route']['kwargs']['schedule_id']
@@ -138,6 +143,12 @@ class MediaStreamConsumer(AsyncWebsocketConsumer):
             if user_text:
                 self.user_transcript.append(user_text)
                 logger.info(f"User said: {user_text}")
+                
+                # Real-time Crisis Detection
+                if any(keyword in user_text.lower() for keyword in self.CRISIS_KEYWORDS):
+                    logger.warning(f"⚠️ CRISIS DETECTED in call {self.call_sid}: {user_text}")
+                    # In a production system, this would trigger an immediate alert (SMS/Email) to admins
+                    # or switch the call context to a crisis intervention mode.
         
         elif msg_type == 'agent_response':
             # Agent's response text
