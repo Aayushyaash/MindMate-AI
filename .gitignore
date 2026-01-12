@@ -85,3 +85,10 @@ htmlcov/
 *.temp
 npm-debug.log
 yarn-error.log
+
+# AI / Agent tooling
+.gemini/
+.agent/
+
+# docs
+docs/implementation_plan.md
