@@ -3,7 +3,8 @@
 <div align="center">
 
 ![MindMate](https://img.shields.io/badge/MindMate-Mental_Health_AI-blue)
-![Django](https://img.shields.io/badge/Django-5.1.2-darkgreen)
+![Django](https://img.shields.io/badge/Django-5.1-darkgreen)
+![Gemini](https://img.shields.io/badge/Gemini-3.0-orange)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 
 *A comprehensive, real-time AI-powered mental health and wellness platform with voice capabilities, interactive games, and advanced psychological assessments.*
@@ -41,8 +42,9 @@
 
 ### 🤖 AI-Powered Assessments
 - Intelligent psychological assessment quizzes
-- Google Gemini API-powered question generation
+- Google Gemini 3 Flash/Pro with automatic fallback
 - Personalized mental health scoring
+- Startup health checks for all API connections
 
 ### 🎮 Interactive Games & Activities
 - Cognitive wellness games
@@ -70,12 +72,13 @@
 
 | Category | Technologies |
 |----------|-------------|
-| **Backend** | Django 5.1.2, Python 3.8+, Django Channels 4.0, Daphne 4.0 |
-| **Task Queue** | Celery 5.3.4 with Redis |
-| **AI/ML** | Google Gemini API, Cloudflare AI |
-| **Voice** | Twilio, ElevenLabs TTS |
+| **Backend** | Django 5.1, Python 3.8+, Django Channels 4.0, Daphne 4.0 |
+| **Task Queue** | Celery 5.3 with Redis |
+| **AI/ML** | Google Gemini 3 (Flash/Pro), Cloudflare AI, `google-genai` SDK |
+| **Voice** | Twilio Voice API, ElevenLabs Conversational AI |
 | **Frontend** | Django Templates, Bootstrap 5, WebSocket API |
-| **Infrastructure** | Redis, SQLite/PostgreSQL, ngrok |
+| **Infrastructure** | Redis, SQLite, ngrok (dev) |
+| **Testing** | pytest, pytest-django, pytest-cov |
 
 ---
 
@@ -120,7 +123,7 @@ graph TD
 ### API Keys Required
 | Service | Purpose | Get From |
 |---------|---------|----------|
-| Google Gemini | AI Chat & Quiz Generation | [aistudio.google.com](https://aistudio.google.com/apikey) |
+| Google Gemini | AI Chat, Quiz, Prescription OCR | [ai.google.dev](https://ai.google.dev/) |
 | Cloudflare AI | Sentiment Analysis | [dash.cloudflare.com](https://dash.cloudflare.com/) |
 | Twilio | Voice Calls | [twilio.com/console](https://www.twilio.com/console) |
 | ElevenLabs | Text-to-Speech | [elevenlabs.io](https://elevenlabs.io/) |
@@ -267,16 +270,26 @@ mindmate/
 │   └── views.py           # Quiz & game logic
 │
 ├── voice_calls/           # Voice integration module
-│   ├── services/          # Twilio, ElevenLabs services
 │   ├── consumers.py       # WebSocket consumers
 │   ├── tasks.py           # Celery tasks
 │   └── routing.py         # WebSocket routing
 │
 ├── perplex/               # Django project settings
 │   ├── settings.py        # Main settings
+│   ├── apps.py            # Startup health checks
 │   ├── asgi.py            # ASGI configuration
 │   ├── celery.py          # Celery configuration
-│   └── urls.py            # Root URL routing
+│   ├── urls.py            # Root URL routing
+│   └── services/          # Centralized AI services
+│       ├── gemini_service.py
+│       ├── cloudflare_service.py
+│       ├── elevenlabs_service.py
+│       ├── twilio_service.py
+│       └── health_check.py
+│
+├── tests/                 # Test infrastructure
+│   ├── unit/              # Unit tests
+│   └── integration/       # Integration tests
 │
 ├── templates/             # Global templates
 ├── media/                 # User uploads
@@ -289,14 +302,6 @@ mindmate/
 
 ## 📝 License
 
-© 2025 Techipedia. All rights reserved.
+© 2026 MindMate-AI. All rights reserved.
 
-This project and all its contents are the exclusive property of Techipedia. Unauthorized copying, reproduction, or distribution of this project or any of its components is strictly prohibited without prior written permission from Techipedia.
-
----
-
-<div align="center">
-
-**Built with ❤️ for mental health and wellness**
-
-</div>
+This is a demo/portfolio project for educational purposes.

@@ -1,5 +1,11 @@
 from django.urls import path
-from app.views import *
+from app.views import (
+    index, about, contact, dashboard, how_to_use,
+    video_feed, phq9_view, chatbot_view, chat,
+    audio_phase, analyze_audio, final_results,
+    journal, prescription_digitizer, prescription_list,
+    prescription_detail, prescription_delete
+)
 from accounts.views import complete_profile_view
 
 urlpatterns = [
