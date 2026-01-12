@@ -2,8 +2,7 @@ from celery import shared_task
 from django.utils import timezone
 from django.conf import settings
 from .models import VoiceCallSchedule, VoiceCallHistory, CallSentiment
-from .services.twilio_service import TwilioService
-from .services.elevenlabs_service import ElevenLabsService
+from perplex.services import get_twilio_service, get_elevenlabs_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ def initiate_call(schedule_id):
         twiml_url = f"{base_url}/voice/twiml/{schedule_id}/"
         
         # Initiate call via Twilio
-        service = TwilioService()
+        service = get_twilio_service()
         call_sid = service.initiate_call(
             to_number=call_schedule.phone_number,
             twiml_url=twiml_url
@@ -104,7 +103,7 @@ def update_call_status(call_sid):
     try:
         call_history = VoiceCallHistory.objects.get(twilio_call_sid=call_sid)
         
-        service = TwilioService()
+        service = get_twilio_service()
         details = service.get_call_details(call_sid)
         
         if details:
@@ -149,7 +148,7 @@ def analyze_call_sentiment(call_history_id):
             return "No transcript to analyze"
         
         # Analyze sentiment using ElevenLabs service
-        service = ElevenLabsService()
+        service = get_elevenlabs_service()
         sentiment_data = service.analyze_sentiment(full_text)
         
         # Create or update sentiment record

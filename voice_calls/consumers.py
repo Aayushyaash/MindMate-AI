@@ -8,7 +8,7 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import VoiceCallHistory
-from .services.elevenlabs_service import ElevenLabsService
+from perplex.services import get_elevenlabs_service
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class MediaStreamConsumer(AsyncWebsocketConsumer):
     async def setup_elevenlabs(self):
         """Connect to ElevenLabs WebSocket"""
         try:
-            service = ElevenLabsService()
+            service = get_elevenlabs_service()
             signed_url = await database_sync_to_async(service.get_signed_url)()
             
             logger.info(f"Attempting to connect to ElevenLabs with URL: {signed_url[:50]}...")
@@ -181,7 +181,7 @@ class MediaStreamConsumer(AsyncWebsocketConsumer):
                     
                     # Send initial configuration to ElevenLabs
                     if self.elevenlabs_ws and self.is_connected:
-                        service = ElevenLabsService()
+                        service = get_elevenlabs_service()
                         config = service.create_agent_config(
                             self.custom_parameters.get('prompt'),
                             self.custom_parameters.get('first_message')
