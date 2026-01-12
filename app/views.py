@@ -1,9 +1,25 @@
 import json
 import traceback
+import logging
+import requests
+import asyncio
+import os
+import base64
+from collections import Counter
+from asgiref.sync import sync_to_async
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import Http404, JsonResponse
+from django.http import Http404, JsonResponse, StreamingHttpResponse
 from django.utils.safestring import mark_safe
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.conf import settings
+from django.contrib import messages
+from django_ratelimit.decorators import ratelimit
+
+import cv2
+from fer import FER
+
 from accounts.models import Profile
 from app.models import (
     TestResult,
@@ -12,31 +28,13 @@ from app.models import (
     Prescription,
     JournalEntry,
 )
-from collections import Counter
 from app.forms import PHQ9Form, JournalForm, PrescriptionForm
-import cv2
-from fer import FER
-from django.http import StreamingHttpResponse
-from django.urls import reverse
-import os
-from dotenv import load_dotenv
-import google.generativeai as genai
-import logging
-import requests
-from django.conf import settings
-from django.contrib import messages
-import asyncio
-from asgiref.sync import sync_to_async
+from perplex.services import get_gemini_service, get_cloudflare_service
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
 
-load_dotenv()
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 # Create your views here.
-
 
 def index(request):
     return render(request, "app/index.html")
@@ -137,9 +135,7 @@ class VideoCamera:
         for emotion in emotions:
             (x, y, w, h) = emotion["box"]
             dominant_emotion = max(emotion["emotions"], key=emotion["emotions"].get)
-            print(
-                f"Detected Emotion: {dominant_emotion}"
-            )  # Log detected emotion for debugging
+            logger.debug(f"Detected Emotion: {dominant_emotion}")
 
             cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)
             cv2.putText(
@@ -315,6 +311,7 @@ def chatbot_view(request):
     )
 
 
+@ratelimit(key='user_or_ip', rate='5/m', block=True)
 @login_required
 def chat(request):
     if request.method == "POST":
@@ -344,10 +341,8 @@ def chat(request):
         **Now Craft Your Response:**"""
 
         try:
-            # Generate response using latest Gemini 2.5 Flash (faster and more capable)
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            response = model.generate_content(prompt)
-            chat_response = response.text.strip().replace("**", "")  # Remove markdown
+            # Generate response using centralized Gemini service (Gemini 3 Flash with fallback)
+            chat_response = get_gemini_service().generate_content(prompt, "flash").strip().replace("**", "")
 
             # Save to history
             ChatHistory.objects.create(
@@ -370,11 +365,14 @@ def chat(request):
 
 def get_recommendation(score, category):
     prompt = f"Based on a PHQ-9 depression score of {score}, categorized as {category}, provide a brief 3-4 line recommendation for mental health care, focusing on self-care and professional advice."
-    # Using Gemini 2.5 Flash for better performance and accuracy
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    response = model.generate_content(prompt)
-    if response and response.text:
-        return response.text.strip().split("\n")[0:4]  # Limit to 3-4 lines
+    try:
+        # Using Gemini 3 Flash
+        response_text = get_gemini_service().generate_content(prompt, "flash")
+        if response_text:
+            return response_text.strip().split("\n")[0:4]  # Limit to 3-4 lines
+    except Exception as e:
+        logger.error(f"Error getting recommendation: {e}")
+    
     return "No recommendation available."  # Return a default message if no response is generated
 
 
@@ -386,104 +384,7 @@ def audio_phase(request):
     return render(request, "app/audio_recording.html")
 
 
-def analyze_text_with_model(text):
-    """Process Cloudflare API response and calculate depression score"""
-    logger = logging.getLogger(__name__)
-    logger.info("Starting text analysis")
-
-    MODEL = "@cf/huggingface/distilbert-sst-2-int8"
-    API_KEY = os.getenv("CLOUDFLARE_API_TOKEN")
-    ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
-
-    logger.info(
-        f"API Config - Model: {MODEL}, Account ID exists: {bool(ACCOUNT_ID)}, API Key exists: {bool(API_KEY)}"
-    )
-
-    try:
-        API_BASE_URL = (
-            f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/run/"
-        )
-        headers = {"Authorization": f"Bearer {API_KEY}"}
-
-        logger.info(f"Making API request to {API_BASE_URL}{MODEL}")
-
-        response = requests.post(
-            f"{API_BASE_URL}{MODEL}", headers=headers, json={"text": text}, timeout=10
-        )
-
-        logger.info(f"API Response status: {response.status_code}")
-
-        # Check for API errors
-        if response.status_code != 200:
-            logger.error(f"API Error: HTTP {response.status_code} - {response.text}")
-            raise ValueError(f"API Error: HTTP {response.status_code}")
-
-        response_json = response.json()
-        logger.info(f"API Response: {json.dumps(response_json)}")
-
-        # Validate successful response
-        if not response_json.get("success", False):
-            logger.error(f"API request unsuccessful: {json.dumps(response_json)}")
-            raise ValueError("API request unsuccessful")
-
-        # Based on the exact response format you provided
-        results = response_json.get("result", [])
-        logger.info(f"Extracted results: {results}")
-
-        # Extract negative sentiment score directly from the results list
-        negative_score = 0.0
-        for item in results:
-            if item.get("label") == "NEGATIVE":
-                negative_score = item.get("score", 0.0)
-                logger.info(f"Found negative score: {negative_score}")
-                break
-
-        logger.info(f"Final negative score: {negative_score}")
-
-        # Calculate base depression score (0-25 scale)
-        adjusted_score = negative_score**0.7  # Non-linear scaling
-        depression_score = round(adjusted_score * 25)
-        logger.info(f"Base depression score: {depression_score}")
-
-        # Apply keyword boosts (0-10 max boost)
-        depression_keywords = [
-            "sad",
-            "depressed",
-            "hopeless",
-            "worthless",
-            "suffer",
-            "can't feel",
-            "pain",
-            "tired",
-            "exhausted",
-            "give up",
-        ]
-        keyword_matches = sum(1 for kw in depression_keywords if kw in text.lower())
-        logger.info(f"Keyword matches: {keyword_matches}")
-
-        depression_score = min(depression_score + (keyword_matches * 2), 25)
-        logger.info(f"Final depression score after keyword boost: {depression_score}")
-
-        result = {
-            "depression_score": depression_score,
-            "confidence": negative_score,
-            "processed_text": text,
-            "raw_result": response_json,
-        }
-        logger.info(f"Returning analysis result: {result}")
-        return result
-
-    except Exception as e:
-        logger.error(f"Text analysis failed: {str(e)}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        return {
-            "depression_score": 0,
-            "confidence": 0,
-            "processed_text": text,
-            "error": str(e),
-        }
-
-
+@ratelimit(key='user_or_ip', rate='10/m', block=True)
 @login_required
 def analyze_audio(request):
     logger = logging.getLogger(__name__)
@@ -509,20 +410,16 @@ def analyze_audio(request):
                 logger.error("No transcription received")
                 raise ValueError("No transcription received")
 
-            # Analyze the transcribed text
-            logger.info("Calling analyze_text_with_model")
-            analysis = analyze_text_with_model(transcription)
+            # Analyze the transcribed text using Cloudflare service
+            logger.info("Calling Cloudflare service for depression score")
+            analysis = get_cloudflare_service().calculate_depression_score(transcription)
             logger.info(f"Analysis result: {json.dumps(analysis)}")
 
-            # Check if analysis failed
-            if "error" in analysis:
-                logger.error(f"Text analysis error: {analysis['error']}")
-                return render(
-                    request,
-                    "app/error.html",
-                    {"error": f"Analysis failed: {analysis['error']}"},
-                )
-
+            # Check if analysis failed (though service handles errors internally)
+            if "raw_result" in analysis and "error" in analysis["raw_result"]:
+                 logger.error(f"Text analysis error: {analysis['raw_result']['error']}")
+                 # We can choose to show error or proceed with default
+            
             # Store values securely before creating test result
             try:
                 phq9_score = int(request.session["phq9_data"].get("form_score", 0))
@@ -734,43 +631,8 @@ def final_results(request, result_id):
         )
 
 
-def analyze_journal_text(text):
-    """Analyze text using Cloudflare's sentiment model"""
-    API_KEY = os.getenv("CLOUDFLARE_API_TOKEN")
-    ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
-    MODEL = "@cf/huggingface/distilbert-sst-2-int8"
-
-    if not API_KEY or not ACCOUNT_ID:
-        logger.error("Missing Cloudflare API credentials")
-        return {"error": "API configuration missing"}
-
-    try:
-        response = requests.post(
-            f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/run/{MODEL}",
-            headers={"Authorization": f"Bearer {API_KEY}"},
-            json={"text": text},
-            timeout=10,
-        )
-
-        if response.status_code != 200:
-            return {"error": f"API error: {response.status_code}"}
-
-        result = response.json().get("result", [])
-        scores = {"positive": 0.0, "negative": 0.0}
-
-        for item in result:
-            if item["label"] == "POSITIVE":
-                scores["positive"] = float(item["score"])
-            elif item["label"] == "NEGATIVE":
-                scores["negative"] = float(item["score"])
-
-        return scores
-
-    except Exception as e:
-        logger.error(f"Analysis failed: {str(e)}")
-        return {"error": str(e)}
-
-
+@ratelimit(key='user_or_ip', rate='10/m', block=True)
+@login_required
 def journal(request):
     if request.method == "POST":
         form = JournalForm(request.POST)
@@ -778,62 +640,24 @@ def journal(request):
             entry = form.save(commit=False)
             entry.user = request.user
 
-            # Perform sentiment analysis
-            analysis = analyze_journal_text(entry.content)
-
-            if "error" not in analysis:
+            # Perform sentiment analysis using Cloudflare service
+            try:
+                analysis = get_cloudflare_service().analyze_sentiment(entry.content)
                 entry.positive_score = analysis.get("positive", 0)
                 entry.negative_score = analysis.get("negative", 0)
                 entry.save()
                 return redirect("journal")
-            else:
-                # Handle analysis error
-                messages.error(request, f"Analysis failed: {analysis['error']}")
-
+            except Exception as e:
+                logger.error(f"Journal analysis failed: {e}")
+                messages.error(request, f"Analysis failed: {str(e)}")
+    
     entries = JournalEntry.objects.filter(user=request.user).order_by("-entry_date")
     return render(
         request, "app/journal.html", {"form": JournalForm(), "entries": entries}
     )
 
 
-def extract_prescription_info(file_data, mime_type):
-    """Extract information from prescription using Gemini AI"""
-    try:
-        # Using Gemini 2.5 Pro for better document understanding and extraction
-        model = genai.GenerativeModel("gemini-2.5-pro")
-
-        prompt = """You are an expert medical data extractor. Your task is to analyze the provided medical document and extract only the most critical information.
-
-Format the output using simple, clean HTML.
-- Use <h3> for section titles (e.g., 'Patient Details').
-- Use <ul> and <li> for lists of medications or other items.
-- Use <strong> to highlight key terms like 'Name:' or medication names.
-- Do not include <html>, <head>, or <body> tags. Do not use any CSS or <style> tags.
-
-**Extraction Rules:**
-1.  **Do not add any introductory text or preamble.** Directly start with the extracted HTML data.
-2.  Extract the following sections if present:
-    *   **Patient Details**: Include name, age, and gender.
-    *   **Prescribing Doctor**: Include the doctor's name and clinic/hospital.
-    *   **Diagnosis**: The primary diagnosis mentioned in the prescription.
-    *   **Date of Prescription**: The date the prescription was issued.
-    *   **Medications**: For each medication, create a list item with its name, dosage, and frequency/instructions.
-    *   **Instructions**: Include any other special instructions for the patient.
-
-3.  **Ignore all non-essential information**: This includes pharmacy logos, addresses, phone numbers, barcodes, etc.
-4.  If the document does not appear to be a medical prescription, respond with only this exact text: 'This document does not appear to be a medical prescription.'"""
-
-        # Prepare the image part
-        image_part = {"mime_type": mime_type, "data": file_data}
-
-        response = model.generate_content([prompt, image_part])
-        return response.text
-
-    except Exception as e:
-        logger.error(f"Prescription extraction error: {str(e)}")
-        return f"Error analyzing prescription: {str(e)}"
-
-
+@ratelimit(key='user_or_ip', rate='2/m', block=True)
 @login_required
 def prescription_digitizer(request):
     """Handle prescription upload and digitization"""
@@ -854,13 +678,9 @@ def prescription_digitizer(request):
                     file_content = file.read()
                     mime_type = file.content_type
 
-                    # Convert to base64 for API
-                    import base64
-
-                    file_base64 = base64.b64encode(file_content).decode("utf-8")
-
-                    # Extract information using Gemini
-                    extracted_text = extract_prescription_info(file_base64, mime_type)
+                    # Extract information using Gemini Service
+                    # Note: We pass raw bytes now, service handles formatting
+                    extracted_text = get_gemini_service().extract_prescription(file_content, mime_type)
 
                     # Save extracted data
                     prescription.extracted_text = extracted_text

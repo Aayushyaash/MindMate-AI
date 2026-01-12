@@ -3,18 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
-import google.generativeai as genai
+from django_ratelimit.decorators import ratelimit
 import json
 import hashlib
 import logging
 import os
 
+from perplex.services import get_gemini_service
 from .models import Quiz, QuizAttempt, QuizQuestion, Leaderboard, UsedQuestion, QUIZ_GENRES
 
 logger = logging.getLogger(__name__)
-
-# Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 @login_required
@@ -55,6 +53,7 @@ def hash_question(question_text):
     return hashlib.sha256(question_text.lower().strip().encode()).hexdigest()
 
 
+@ratelimit(key='user_or_ip', rate='3/m', block=True)
 @login_required
 def generate_quiz(request):
     """Generate quiz questions using Gemini AI"""
@@ -99,12 +98,8 @@ JSON FORMAT (return this exact structure):
 
 Generate 20 questions now in the exact JSON format above. Do not include any markdown formatting or code blocks."""
 
-        # Use Gemini 2.5 Flash for fast, efficient generation
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(prompt)
-        
-        # Parse response
-        response_text = response.text.strip()
+        # Use Gemini Service (Gemini 3 Flash)
+        response_text = get_gemini_service().generate_content(prompt, "flash").strip()
         
         # Remove markdown code blocks if present
         if response_text.startswith('```'):

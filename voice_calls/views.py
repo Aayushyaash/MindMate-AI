@@ -4,13 +4,16 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django_ratelimit.decorators import ratelimit
 from .models import VoiceCallSchedule, VoiceCallHistory
 from .forms import ScheduleCallForm
+from perplex.services import get_twilio_service
 import logging
 
 logger = logging.getLogger(__name__)
 
 
+@ratelimit(key='user_or_ip', rate='1/m', block=True)
 @login_required
 def schedule_call(request):
     """View to schedule a wellness call"""
@@ -25,6 +28,19 @@ def schedule_call(request):
                         'success': False,
                         'error': 'Please add your phone number in your profile first'
                     }, status=400)
+                
+                # Validate phone number with Twilio
+                try:
+                    is_valid = get_twilio_service().validate_phone_number(profile.phone_number)
+                    if not is_valid:
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Invalid phone number format. Please update your profile.'
+                        }, status=400)
+                except Exception as e:
+                    # Log warning but proceed if Twilio validation fails (e.g. network issue)
+                    # unless it's a strict requirement. Plan implies it should be used.
+                    logger.warning(f"Phone validation failed or skipped: {e}")
                 
                 # Create call schedule
                 call_schedule = form.save(commit=False)
