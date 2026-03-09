@@ -7,9 +7,29 @@
 ![Gemini](https://img.shields.io/badge/Gemini-3.0-orange)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 
-*A comprehensive, real-time AI-powered mental health and wellness platform with voice capabilities, interactive games, and advanced psychological assessments.*
+*A full-featured, real-time AI-powered mental health and wellness platform with voice capabilities, interactive games, and psychological assessments.*
 
 </div>
+
+---
+
+> **Team Project** — Built collaboratively as a group project. Original repository maintained by the team lead ([KumarAryan0530/MindMate-AI](https://github.com/KumarAryan0530/MindMate-AI)). My contributions are listed below.
+
+### 👥 Team
+
+| Role | Name | GitHub |
+|------|------|--------|
+| Team Lead | Kumar Aryan | [@KumarAryan0530](https://github.com/KumarAryan0530) |
+| Member | Riti Kumari | [@ritikumari020](https://github.com/ritikumari020) |
+| Member | Aayush Yash | [@Aayushyaash](https://github.com/Aayushyaash) |
+
+### My Contributions
+- **Voice**: Real-time voice call integration using Twilio WebRTC and ElevenLabs TTS pipeline
+- **AI Assessments**: PHQ-9 psychological assessment quizzes with Gemini Flash/Pro and automatic model fallback
+- **Games**: Cognitive wellness games, mood-tracking gamification, and stress-relief mini-games with leaderboards
+- **Real-time**: WebSocket consumers for live AI chat via Django Channels with real-time progress updates
+- **Auth & Profiles**: User authentication with django-allauth, mental health history tracking, privacy-focused storage
+- **Analytics**: Journal entry management, prescription tracking, and mental health assessment reporting
 
 ---
 
@@ -29,7 +49,7 @@
 
 ## 🎯 Overview
 
-**MindMate** is an innovative, enterprise-grade mental health and wellness platform that leverages artificial intelligence to provide accessible, personalized mental health support. Built with Django 5.1, it features real-time voice interactions, AI-driven psychological assessments, and an interactive gaming system designed to promote mental wellness.
+**MindMate** is a mental health and wellness platform that uses AI to provide accessible, personalized support. Built with Django 5.1, it includes real-time voice interactions, AI-driven psychological assessments (PHQ-9), and a wellness gaming system.
 
 ---
 
@@ -41,15 +61,15 @@
 - ElevenLabs text-to-speech for natural conversations
 
 ### 🤖 AI-Powered Assessments
-- Intelligent psychological assessment quizzes
-- Google Gemini 3 Flash/Pro with automatic fallback
+- Psychological assessment quizzes (PHQ-9)
+- Google Gemini Flash/Pro with automatic fallback
 - Personalized mental health scoring
 - Startup health checks for all API connections
 
 ### 🎮 Interactive Games & Activities
 - Cognitive wellness games
 - Mood-tracking gamification
-- Stress-relief mini-games
+- Stress-relief mini-games with leaderboards
 
 ### 👥 User Management
 - Secure authentication with django-allauth
@@ -74,7 +94,7 @@
 |----------|-------------|
 | **Backend** | Django 5.1, Python 3.8+, Django Channels 4.0, Daphne 4.0 |
 | **Task Queue** | Celery 5.3 with Redis |
-| **AI/ML** | Google Gemini 3 (Flash/Pro), Cloudflare AI, `google-genai` SDK |
+| **AI/ML** | Google Gemini (Flash/Pro), Cloudflare AI, `google-genai` SDK |
 | **Voice** | Twilio Voice API, ElevenLabs Conversational AI |
 | **Frontend** | Django Templates, Bootstrap 5, WebSocket API |
 | **Infrastructure** | Redis, SQLite, ngrok (dev) |
@@ -135,8 +155,8 @@ graph TD
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/mindmate.git
-cd mindmate
+git clone https://github.com/Aayushyaash/MindMate-AI.git
+cd MindMate-AI
 ```
 
 ### 2. Create Virtual Environment
@@ -162,9 +182,7 @@ pip install -r requirements.txt
 ### 4. Configure Environment
 
 ```bash
-# Copy example config
 cp .env.example .env
-
 # Edit .env and add your API keys
 ```
 
@@ -256,52 +274,49 @@ celery -A perplex beat -l info
 ```
 mindmate/
 ├── accounts/              # User authentication & profiles
-│   ├── models.py          # User profile models
-│   ├── views.py           # Auth views
-│   └── forms.py           # Registration forms
+│   ├── models.py
+│   ├── views.py
+│   └── forms.py
 │
 ├── app/                   # Core application
-│   ├── models.py          # Main data models
-│   ├── views.py           # Core views & AI chat
-│   └── urls.py            # URL routing
+│   ├── models.py
+│   ├── views.py
+│   └── urls.py
 │
 ├── games/                 # Gamification & wellness games
-│   ├── models.py          # Game models
-│   └── views.py           # Quiz & game logic
+│   ├── models.py
+│   └── views.py
 │
 ├── voice_calls/           # Voice integration module
 │   ├── consumers.py       # WebSocket consumers
 │   ├── tasks.py           # Celery tasks
-│   └── routing.py         # WebSocket routing
+│   └── routing.py
 │
 ├── perplex/               # Django project settings
-│   ├── settings.py        # Main settings
-│   ├── apps.py            # Startup health checks
-│   ├── asgi.py            # ASGI configuration
-│   ├── celery.py          # Celery configuration
-│   ├── urls.py            # Root URL routing
-│   └── services/          # Centralized AI services
+│   ├── settings.py
+│   ├── asgi.py
+│   ├── celery.py
+│   ├── urls.py
+│   └── services/
 │       ├── gemini_service.py
 │       ├── cloudflare_service.py
 │       ├── elevenlabs_service.py
 │       ├── twilio_service.py
 │       └── health_check.py
 │
-├── tests/                 # Test infrastructure
-│   ├── unit/              # Unit tests
-│   └── integration/       # Integration tests
+├── tests/
+│   ├── unit/
+│   └── integration/
 │
-├── templates/             # Global templates
-├── media/                 # User uploads
-├── requirements.txt       # Python dependencies
-├── .env.example           # Example environment config
-└── README.md              # This file
+├── templates/
+├── media/
+├── requirements.txt
+├── .env.example
+└── README.md
 ```
 
 ---
 
 ## 📝 License
 
-© 2026 MindMate-AI. All rights reserved.
-
-This is a demo/portfolio project for educational purposes.
+MIT License — demo/portfolio project for educational purposes.
